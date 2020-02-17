@@ -9,5 +9,5 @@
 	#define DISABLE_ALL_WARNINGS_BEGIN() _Pragma("message(\"TODO\")")
 	#define DISABLE_WARNINGS_END() _Pragma("GCC diagnostic pop")
 
-	#define DISABLE_WARNING(warn) _Pragma("GCC diagnostic ignored \"-W ## warn ## \"")
+	#define DISABLE_WARNING(warn) /**/
 #endif
