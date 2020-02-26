@@ -46,6 +46,8 @@ function(create_library library_name folder_name _source_files)
 
     enable_maximum_warnings(${library_name})
 
+	set(_src_root_path "${CMAKE_CURRENT_SOURCE_DIR}/")
+	
 	foreach(_source IN ITEMS ${source_files})
 		get_filename_component(_source_path "${_source}" PATH)
 		file(RELATIVE_PATH _source_path_rel "${_src_root_path}" "${_source_path}")
