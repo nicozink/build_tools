@@ -1,3 +1,46 @@
+# Define the operating system types.
+set(WINDOWS_ENUM 0)
+set(MACOS_ENUM 1)
+set(UNIX_ENUM 2)
+
+# Define the compiler types.
+set(CLANG_ENUM 3)
+set(GCC_ENUM 4)
+set(MINGW_ENUM 5)
+set(VISUAL_STUDIO_ENUM 6)
+
+# Define the render systems.
+set(SDL_ENUM 7)
+set(GLX_ENUM 8)
+
+# Define the architecture.
+set(X86_ENUM 9)
+set(X64_ENUM 10)
+
+# Detect the operating system.
+if (WIN32)
+	set(OPERATING_SYSTEM ${WINDOWS_ENUM})
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	set(OPERATING_SYSTEM ${MACOS_ENUM})
+elseif (UNIX)
+	set(OPERATING_SYSTEM ${UNIX_ENUM})
+else (WIN32)
+	message(FATAL_ERROR "An unknown operating system is being used." )
+endif (WIN32)
+
+# Detect the compiler.
+if (MSVC)
+	set(COMPILER ${VISUAL_STUDIO_ENUM})
+elseif (MINGW)
+	set(COMPILER ${MINGW_ENUM})
+elseif (CMAKE_COMPILER_IS_GNUCC)
+	set(COMPILER ${GCC_ENUM})
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+	set(COMPILER ${CLANG_ENUM})
+else (MSVC)
+	message(FATAL_ERROR "An unknown compiler is being used." )
+endif (MSVC)
+
 function(enable_maximum_warnings library_name)
     if(MSVC)
         target_compile_options(${library_name} PRIVATE /W4 /WX)
@@ -80,9 +123,15 @@ function(initialise_build_tools)
 
 	create_interface(build_tools library ${SRC_INTERFACE})
 
+	configure_file (
+		"${CMAKE_CURRENT_SOURCE_DIR}/build_tools/cpp/build_tools/platforms.h.in"
+		"${CMAKE_CURRENT_BINARY_DIR}/build_tools/cpp/build_tools/platforms.h"
+	)
+
 	target_include_directories(build_tools
 		INTERFACE
 		${CMAKE_CURRENT_SOURCE_DIR}/build_tools/cpp
+		${CMAKE_CURRENT_BINARY_DIR}/build_tools/cpp
 	)
 endfunction(initialise_build_tools)
 
