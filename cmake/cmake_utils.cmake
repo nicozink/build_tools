@@ -1,3 +1,15 @@
+if (EXISTS ${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake)
+	set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake)
+endif()
+
+if (VCPKG_TARGET_TRIPLET MATCHES "wasm32-emscripten")
+	set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE $ENV{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake)
+else()
+	message(FATAL_ERROR "Not found ${VCPKG_TARGET_TRIPLET}")
+endif()
+
+PROJECT(build_tools VERSION 1.0.0)
+
 # Define the operating system types.
 set(WINDOWS_ENUM 0)
 set(MACOS_ENUM 1)
@@ -109,6 +121,8 @@ function(create_interface library_name folder_name _source_files)
 
     #enable_maximum_warnings(${library_name})
 
+	set(_src_root_path "${CMAKE_CURRENT_SOURCE_DIR}/")
+	
 	foreach(_source IN ITEMS ${source_files})
 		get_filename_component(_source_path "${_source}" PATH)
 		file(RELATIVE_PATH _source_path_rel "${_src_root_path}" "${_source_path}")
