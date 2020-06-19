@@ -2,6 +2,7 @@ import argparse
 import os
 from pathlib import Path
 import platform
+import setup_emscripten
 import subprocess
 
 def is_darwin():
@@ -49,6 +50,9 @@ def main(args):
     if args.platform == "native":
         vcpkg_triplet = ""
     else:
+        setup_emscripten.setup()
+        os.environ["EMSDK"] = str(Path("emsdk") / "emsdk_env.sh")
+
         vcpkg_triplet = ":wasm32-emscripten"
     
     subprocess.call([vcpkg, "install", "boost-signals2" + vcpkg_triplet])
@@ -57,11 +61,10 @@ def main(args):
     if args.platform == "native":
         subprocess.call(["cmake", project_root])
     else:
-        subprocess.call(["emcmake", "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten"])
+        subprocess.call([Path(".") / "emsdk" / "upstream" / "emscripten" / "emcmake", "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten"])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-
 
     parser.add_argument("--platform", choices=["native", "emscripten"], default="native", help='The platform')
 
