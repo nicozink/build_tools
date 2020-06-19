@@ -51,7 +51,7 @@ def main(args):
         vcpkg_triplet = ""
     else:
         setup_emscripten.setup()
-        os.environ["EMSDK"] = str(Path("emsdk") / "emsdk_env.sh")
+        os.environ["EMSDK"] = os.path.abspath("emsdk")
 
         vcpkg_triplet = ":wasm32-emscripten"
     
