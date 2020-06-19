@@ -4,8 +4,6 @@ endif()
 
 if (VCPKG_TARGET_TRIPLET MATCHES "wasm32-emscripten")
 	set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE $ENV{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake)
-else()
-	message(FATAL_ERROR "Not found ${VCPKG_TARGET_TRIPLET}")
 endif()
 
 PROJECT(build_tools VERSION 1.0.0)
