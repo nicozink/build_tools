@@ -33,21 +33,25 @@ def main(args):
     project_root = (script_location / ".." / ".." / "..").resolve()
 
     vcpkg_root = project_root / "vcpkg"
-    vcpkg = vcpkg_root / get_vcpkg()
 
-    if not vcpkg.is_file():
-        subprocess.call([vcpkg_root / get_bootstrap_vcpkg()])
-
-    if args.platform == "native":
-        vcpkg_triplet = ""
-    else:
+    if args.platform == "emscripten":
         setup_emscripten.setup()
-        os.environ["EMSDK"] = os.path.abspath("emsdk")
 
-        vcpkg_triplet = ":wasm32-emscripten"
-    
-    subprocess.call([vcpkg, "install", "boost-signals2" + vcpkg_triplet])
-    subprocess.call([vcpkg, "install", "boost-system" + vcpkg_triplet])
+    if vcpkg_root.is_file():
+        vcpkg = vcpkg_root / get_vcpkg()
+
+        if not vcpkg.is_file():
+            subprocess.call([vcpkg_root / get_bootstrap_vcpkg()])
+
+        if args.platform == "native":
+            vcpkg_triplet = ""
+        else:
+            os.environ["EMSDK"] = os.path.abspath("emsdk")
+
+            vcpkg_triplet = ":wasm32-emscripten"
+        
+        subprocess.call([vcpkg, "install", "boost-signals2" + vcpkg_triplet])
+        subprocess.call([vcpkg, "install", "boost-system" + vcpkg_triplet])
 
     if args.platform == "native":
         subprocess.call(["cmake", project_root])
