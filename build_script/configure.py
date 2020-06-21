@@ -37,10 +37,10 @@ def main(args):
     if args.platform == "emscripten":
         setup_emscripten.setup()
 
-    if vcpkg_root.is_file():
+    if vcpkg_root.is_dir():
         vcpkg = vcpkg_root / get_vcpkg()
 
-        if not vcpkg.is_dir():
+        if not vcpkg.is_file():
             subprocess.call([vcpkg_root / get_bootstrap_vcpkg()])
 
         if args.platform == "native":
