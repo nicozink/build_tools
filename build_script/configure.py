@@ -56,8 +56,11 @@ def main(args):
             if py_util.is_windows():
                 subprocess.call([vcpkg, "install", "boost-build:x86-windows"])                
         
-        subprocess.call([vcpkg, "install", "boost-signals2" + vcpkg_triplet])
-        subprocess.call([vcpkg, "install", "boost-system" + vcpkg_triplet])
+        for path in project_root.rglob("vcpkg_list.txt"):
+            with open (project_root / "vcpkg_list.txt", "r") as fileHandler:
+                for line in fileHandler.read().split('\n'):
+                    if line != "":
+                        subprocess.call([vcpkg, "install", line + vcpkg_triplet])
 
     if args.platform == "native":
         subprocess.call(["cmake", project_root])
