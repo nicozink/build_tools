@@ -40,7 +40,7 @@ def main(args):
     if vcpkg_root.is_file():
         vcpkg = vcpkg_root / get_vcpkg()
 
-        if not vcpkg.is_file():
+        if not vcpkg.is_dir():
             subprocess.call([vcpkg_root / get_bootstrap_vcpkg()])
 
         if args.platform == "native":
