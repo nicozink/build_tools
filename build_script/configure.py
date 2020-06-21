@@ -45,9 +45,9 @@ def main(args):
 
         if args.platform == "native":
             if py_util.is_windows():
-				vcpkg_triplet = ":x64-windows"
-			else:
-				vcpkg_triplet = ""
+                vcpkg_triplet = ":x64-windows"
+            else:
+                vcpkg_triplet = ""
         else:
             os.environ["EMSDK"] = os.path.abspath("emsdk")
 
