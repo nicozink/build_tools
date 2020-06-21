@@ -52,6 +52,9 @@ def main(args):
             os.environ["EMSDK"] = os.path.abspath("emsdk")
 
             vcpkg_triplet = ":wasm32-emscripten"
+
+            if py_util.is_windows():
+                subprocess.call([vcpkg, "install", "boost-build:x86-windows"])                
         
         subprocess.call([vcpkg, "install", "boost-signals2" + vcpkg_triplet])
         subprocess.call([vcpkg, "install", "boost-system" + vcpkg_triplet])
