@@ -44,7 +44,10 @@ def main(args):
             subprocess.call([vcpkg_root / get_bootstrap_vcpkg()])
 
         if args.platform == "native":
-            vcpkg_triplet = ""
+            if py_util.is_windows():
+				vcpkg_triplet = ":x64-windows"
+			else:
+				vcpkg_triplet = ""
         else:
             os.environ["EMSDK"] = os.path.abspath("emsdk")
 
