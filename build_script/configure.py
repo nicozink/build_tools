@@ -2,35 +2,26 @@ import argparse
 import os
 from pathlib import Path
 import platform
+import py_util
 import setup_emscripten
 import subprocess
 
-def is_darwin():
-    if platform.system() == "Darwin":
-        return True
-    else:
-        return False
+def get_emcmake():
+    root_path = Path("emsdk") / "upstream" / "emscripten"
 
-def is_linux():
-    if platform.system() == "Linux":
-        return True
+    if py_util.is_windows():
+        return root_path / "emcmake.bat"
     else:
-        return False
-
-def is_windows():
-    if platform.system() == "Windows":
-        return True
-    else:
-        return False
+        return Path(".") / root_path / "emcmake"
 
 def get_vcpkg():
-    if is_windows():
+    if py_util.is_windows():
         return "vcpkg.exe"
     else:
         return "vcpkg"
 
 def get_bootstrap_vcpkg():
-    if is_windows():
+    if py_util.is_windows():
         return "bootstrap-vcpkg.bat"
     else:
         return "bootstrap-vcpkg.sh"
@@ -61,7 +52,10 @@ def main(args):
     if args.platform == "native":
         subprocess.call(["cmake", project_root])
     else:
-        subprocess.call([Path(".") / "emsdk" / "upstream" / "emscripten" / "emcmake", "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten"])
+        if py_util.is_windows():
+            subprocess.call([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten", "-G", "NMake Makefiles"])
+        else:
+            subprocess.call([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten"])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
