@@ -32,15 +32,23 @@ def main(args):
     script_location = Path(os.path.abspath(__file__))
     project_root = (script_location / ".." / ".." / "..").resolve()
 
-    vcpkg_root = project_root / "vcpkg"
-
     if args.platform == "emscripten":
         setup_emscripten.setup()
 
-    if vcpkg_root.is_dir():
+    vcpkg_list = project_root.rglob("vcpkg_list.txt")
+    
+    if vcpkg_list:
+        vcpkg_root = Path("vcpkg")
         vcpkg = vcpkg_root / get_vcpkg()
 
         if not vcpkg.is_file():
+            subprocess.call(["git", "clone", "https://github.com/microsoft/vcpkg.git"])
+
+            cwd = os.getcwd()
+            os.chdir(vcpkg_root)
+            subprocess.call(["git", "checkout", "ee17a685087a6886e5681e355d36cd784f0dd2c8"])
+            os.chdir(cwd)
+
             subprocess.call([vcpkg_root / get_bootstrap_vcpkg()])
 
         if args.platform == "native":
@@ -54,10 +62,10 @@ def main(args):
             vcpkg_triplet = ":wasm32-emscripten"
 
             if py_util.is_windows():
-                subprocess.call([vcpkg, "install", "boost-build:x86-windows"])                
+                subprocess.call([vcpkg, "install", "boost-build:x86-windows"])
         
-        for path in project_root.rglob("vcpkg_list.txt"):
-            with open (project_root / "vcpkg_list.txt", "r") as fileHandler:
+        for vcpgk_file in vcpkg_list:
+            with open (vcpgk_file, "r") as fileHandler:
                 for line in fileHandler.read().split('\n'):
                     if line != "":
                         subprocess.call([vcpkg, "install", line + vcpkg_triplet])

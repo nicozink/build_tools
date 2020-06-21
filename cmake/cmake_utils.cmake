@@ -1,5 +1,5 @@
-if (EXISTS ${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake)
-	set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake)
+if (EXISTS ${CMAKE_BINARY_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake)
+	set(CMAKE_TOOLCHAIN_FILE ${CMAKE_BINARY_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake)
 endif()
 
 if (VCPKG_TARGET_TRIPLET MATCHES "wasm32-emscripten")
