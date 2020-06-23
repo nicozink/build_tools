@@ -150,6 +150,6 @@ function(initialise_build_tools)
 	)
 endfunction(initialise_build_tools)
 
-if (${CMAKE_CURRENT_SOURCE_DIR} MATCHES ${CMAKE_SOURCE_DIR})
+if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 	initialise_build_tools()
 endif()
