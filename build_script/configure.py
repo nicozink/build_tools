@@ -31,7 +31,7 @@ def main(args):
     
     script_location = Path(os.path.abspath(__file__))
     libraries_root = (script_location / ".." / ".." / "..").resolve()
-    project_root = Path(args.project_root)
+    project_root = Path(args.project_root).resolve()
 
     if args.platform == "emscripten":
         setup_emscripten.setup()
@@ -51,7 +51,7 @@ def main(args):
 
     for library in libraries_list:
         if not (libraries_root / library).is_dir():
-            subprocess.call(["git", "clone", "https://github.com/nicozink/" + library + ".git"])
+            subprocess.call(["git", "clone", "https://github.com/nicozink/" + library + ".git", libraries_root / library])
 
         if (libraries_root / library / "vcpkg_list.txt").is_file():
             vcpkg_list.append(libraries_root / library / "vcpkg_list.txt")
