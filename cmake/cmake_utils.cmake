@@ -1,3 +1,5 @@
+set(BUILD_TOOLS_PROJECT_FOLDER ${CMAKE_CURRENT_LIST_DIR}/../../)
+
 if (EXISTS ${CMAKE_BINARY_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake)
 	set(CMAKE_TOOLCHAIN_FILE ${CMAKE_BINARY_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake)
 endif()
@@ -132,20 +134,22 @@ endfunction(create_interface)
 
 function(initialise_build_tools)
 	set(SRC_INTERFACE
-		${CMAKE_CURRENT_SOURCE_DIR}/build_tools/cpp/build_tools/warnings.h)
+		${BUILD_TOOLS_PROJECT_FOLDER}/build_tools/cpp/build_tools/warnings.h)
 
 	create_interface(build_tools library ${SRC_INTERFACE})
 
 	configure_file (
-		"${CMAKE_CURRENT_SOURCE_DIR}/build_tools/cpp/build_tools/platforms.h.in"
+		"${BUILD_TOOLS_PROJECT_FOLDER}/build_tools/cpp/build_tools/platforms.h.in"
 		"${CMAKE_CURRENT_BINARY_DIR}/build_tools/cpp/build_tools/platforms.h"
 	)
 
 	target_include_directories(build_tools
 		INTERFACE
-		${CMAKE_CURRENT_SOURCE_DIR}/build_tools/cpp
+		${BUILD_TOOLS_PROJECT_FOLDER}/build_tools/cpp
 		${CMAKE_CURRENT_BINARY_DIR}/build_tools/cpp
 	)
 endfunction(initialise_build_tools)
 
-initialise_build_tools()
+if (${CMAKE_CURRENT_SOURCE_DIR} MATCHES ${CMAKE_SOURCE_DIR})
+	initialise_build_tools()
+endif()

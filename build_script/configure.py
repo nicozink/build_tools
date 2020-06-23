@@ -30,13 +30,29 @@ def main(args):
     print("Build system")
     
     script_location = Path(os.path.abspath(__file__))
-    project_root = (script_location / ".." / ".." / "..").resolve()
+    libraries_root = (script_location / ".." / ".." / "..").resolve()
+    project_root = Path(args.project_root)
 
     if args.platform == "emscripten":
         setup_emscripten.setup()
-
-    vcpkg_list = project_root.rglob("vcpkg_list.txt")
     
+    libraries_list = []
+
+    if (project_root / "libraries_list.txt").is_file():
+        with open (project_root / "libraries_list.txt", "r") as fileHandler:
+            for line in fileHandler.read().split('\n'):
+                if line != "":
+                    libraries_list.append(line)
+    
+    vcpkg_list = []
+
+    if (project_root / "vcpkg_list.txt").is_file():
+        vcpkg_list.append(project_root / "vcpkg_list.txt")
+
+    for library in libraries_list:
+        if (libraries_root / library / "vcpkg_list.txt").is_file():
+            vcpkg_list.append(libraries_root / library / "vcpkg_list.txt")
+
     if vcpkg_list:
         vcpkg_root = Path("vcpkg")
         vcpkg = vcpkg_root / get_vcpkg()
@@ -70,17 +86,20 @@ def main(args):
                     if line != "":
                         subprocess.call([vcpkg, "install", line + vcpkg_triplet])
 
+    cmake_args = ["-DLIBRARY_FOLDER=" + str(libraries_root)]
+
     if args.platform == "native":
-        subprocess.call(["cmake", project_root])
+        subprocess.call(["cmake", str(project_root)] + (cmake_args))
     else:
         if py_util.is_windows():
-            subprocess.call([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten", "-G", "MinGW Makefiles", "-DCMAKE_MAKE_PROGRAM=" + str(setup_emscripten.get_mingw_root() / "mingw32-make.exe")])
+            subprocess.call([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten", "-G", "MinGW Makefiles", "-DCMAKE_MAKE_PROGRAM=" + str(setup_emscripten.get_mingw_root() / "mingw32-make.exe")].extend(cmake_args))
         else:
-            subprocess.call([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten"])
+            subprocess.call([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten"].extend(cmake_args))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--platform", choices=["native", "emscripten"], default="native", help='The platform')
+    parser.add_argument('project_root', type=str, help='The source root directory')
 
     main(parser.parse_args())
