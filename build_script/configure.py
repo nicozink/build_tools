@@ -50,6 +50,9 @@ def main(args):
         vcpkg_list.append(project_root / "vcpkg_list.txt")
 
     for library in libraries_list:
+        if not (libraries_root / library).is_dir():
+            subprocess.call(["git", "clone", "https://github.com/nicozink/" + library + ".git"])
+
         if (libraries_root / library / "vcpkg_list.txt").is_file():
             vcpkg_list.append(libraries_root / library / "vcpkg_list.txt")
 
