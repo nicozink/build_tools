@@ -132,6 +132,12 @@ function(create_interface library_name folder_name _source_files)
 	endforeach()
 endfunction(create_interface)
 
+function(import_library library_name)
+	if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+		add_subdirectory(${LIBRARY_FOLDER}/${library_name} ${library_name})
+	endif()
+endfunction(import_library)
+
 function(initialise_build_tools)
 	set(SRC_INTERFACE
 		${BUILD_TOOLS_PROJECT_FOLDER}/build_tools/cpp/build_tools/warnings.h)
