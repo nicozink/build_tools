@@ -6,7 +6,6 @@ endif()
 
 if (VCPKG_TARGET_TRIPLET MATCHES "wasm32-emscripten")
 	set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE ${CMAKE_BINARY_DIR}/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake)
-	set(NODE_JS ${CMAKE_BINARY_DIR}/emsdk/node/12.9.1_64bit/bin/node)
 endif()
 
 PROJECT(build_tools VERSION 1.0.0)

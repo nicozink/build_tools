@@ -94,10 +94,12 @@ def main(args):
     if args.platform == "native":
         subprocess.call(["cmake", str(project_root)] + (cmake_args))
     else:
+        emscripten_args = ["-DNODE_JS=" + os.path.abspath(setup_emscripten.get_node_js())]
+
         if py_util.is_windows():
-            subprocess.call([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten", "-G", "MinGW Makefiles", "-DCMAKE_MAKE_PROGRAM=" + str(setup_emscripten.get_mingw_root() / "mingw32-make.exe")] + (cmake_args))
+            subprocess.call([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten", "-G", "MinGW Makefiles", "-DCMAKE_MAKE_PROGRAM=" + str(setup_emscripten.get_mingw_root() / "mingw32-make.exe")] + cmake_args + emscripten_args)
         else:
-            subprocess.call([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten"] + (cmake_args))
+            subprocess.call([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten"] + cmake_args + emscripten_args)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

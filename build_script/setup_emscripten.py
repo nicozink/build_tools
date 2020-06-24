@@ -12,6 +12,13 @@ def get_emsdk():
 def get_mingw_root():
     return Path("emsdk") / "mingw" / "7.1.0_64bit" / "bin"
 
+def get_node_js():
+    paths = (Path("emsdk") / "node").iterdir()
+
+    for path in paths:
+        if (Path(path).is_dir()):
+            return Path(path) / "bin" / "node"
+
 def setup():
     if os.path.exists("emsdk"):
         return
@@ -31,5 +38,5 @@ def setup():
 
     subprocess.call([get_emsdk(), "install", emsdk_version])
     subprocess.call([get_emsdk(), "activate", emsdk_version])
-	
+
     os.chdir(cwd)
