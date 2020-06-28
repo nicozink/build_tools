@@ -58,7 +58,7 @@ def read_vcpkg_list(libraries_root, project_root):
 
     return read_list(list(library_folders) + [project_root], "vcpkg_list.txt")
 
-def configure_project(project_root, libraries_root, working_dir, platform):
+def configure_project(project_root, libraries_root, working_dir, platform, github_token):
     project_root = Path(project_root).resolve()
 
     tools_list = read_tools(libraries_root, project_root)
@@ -70,7 +70,7 @@ def configure_project(project_root, libraries_root, working_dir, platform):
         cwd = os.getcwd()
         os.chdir(tool_root)
         
-        configure_project(tool, libraries_root, working_dir, "native")
+        configure_project(tool, libraries_root, working_dir, "native", github_token)
 
         os.chdir(cwd)
 
@@ -81,7 +81,10 @@ def configure_project(project_root, libraries_root, working_dir, platform):
     
     for library in read_library_list(project_root):
         if not (libraries_root / library).is_dir():
-            subprocess.call(["git", "clone", "https://github.com/nicozink/" + library + ".git", libraries_root / library])
+            if (github_token != ""):
+                subprocess.call(["git", "clone", "https://nicozink:" + github_token + "@github.com/nicozink/" + library + ".git", libraries_root / library])
+            else:
+                subprocess.call(["git", "clone", "https://github.com/nicozink/" + library + ".git", libraries_root / library])
 
     library_folders = read_library_folders(libraries_root, project_root)
 
@@ -136,6 +139,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--platform", choices=["native", "emscripten"], default="native", help='The platform')
+    parser.add_argument("--github_token", default="", help='The github authentication token')
     parser.add_argument('project_root', type=str, help='The source root directory')
 
     script_location = Path(os.path.abspath(__file__))
@@ -144,4 +148,4 @@ if __name__ == '__main__':
     working_dir = Path(os.getcwd())
 
     args = parser.parse_args()
-    configure_project(args.project_root, libraries_root, working_dir, args.platform)
+    configure_project(args.project_root, libraries_root, working_dir, args.platform, args.github_token)
