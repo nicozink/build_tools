@@ -26,35 +26,66 @@ def get_bootstrap_vcpkg():
     else:
         return "bootstrap-vcpkg.sh"
 
-def main(args):
-    print("Build system")
-    
-    script_location = Path(os.path.abspath(__file__))
-    libraries_root = (script_location / ".." / ".." / "..").resolve()
-    project_root = Path(args.project_root).resolve()
+def read_list(folders_list, file_name):
+    read_list = []
 
-    if args.platform == "emscripten":
+    for folder in folders_list:
+        if (folder / file_name).is_file():
+            with open (folder / file_name, "r") as fileHandler:
+                for line in fileHandler.read().split('\n'):
+                    if line != "":
+                        yield line
+
+def read_library_list(project_root):
+    return read_list([project_root], "libraries_list.txt")
+
+def read_library_folders(libraries_root, project_root):
+    for folder in read_library_list(project_root):
+        yield libraries_root / folder
+
+def read_tools(libraries_root, project_root):
+    library_folders = read_library_folders(libraries_root, project_root)
+
+    for library_folder in library_folders:
+        for tool in read_list([library_folder], "tools_list.txt"):
+            yield library_folder / "tools" / tool
+
+    for tool in read_list([project_root], "tools_list.txt"):
+        yield project_root / "tools" / tool
+
+def read_vcpkg_list(libraries_root, project_root):
+    library_folders = read_library_folders(libraries_root, project_root)
+
+    return read_list(list(library_folders) + [project_root], "vcpkg_list.txt")
+
+def configure_project(project_root, libraries_root, working_dir, platform):
+    project_root = Path(project_root).resolve()
+
+    tools_list = read_tools(libraries_root, project_root)
+
+    for tool in tools_list:
+        tool_root = Path("tools") / tool.name
+        Path.mkdir(tool_root, parents=True, exist_ok=True)
+
+        cwd = os.getcwd()
+        os.chdir(tool_root)
+        
+        configure_project(tool, libraries_root, working_dir, "native")
+
+        os.chdir(cwd)
+
+        subprocess.call(["cmake", "--install", tool_root])
+    
+    if platform == "emscripten":
         setup_emscripten.setup()
     
-    libraries_list = []
-
-    if (project_root / "libraries_list.txt").is_file():
-        with open (project_root / "libraries_list.txt", "r") as fileHandler:
-            for line in fileHandler.read().split('\n'):
-                if line != "":
-                    libraries_list.append(line)
-    
-    vcpkg_list = []
-
-    if (project_root / "vcpkg_list.txt").is_file():
-        vcpkg_list.append(project_root / "vcpkg_list.txt")
-
-    for library in libraries_list:
+    for library in read_library_list(project_root):
         if not (libraries_root / library).is_dir():
             subprocess.call(["git", "clone", "https://github.com/nicozink/" + library + ".git", libraries_root / library])
 
-        if (libraries_root / library / "vcpkg_list.txt").is_file():
-            vcpkg_list.append(libraries_root / library / "vcpkg_list.txt")
+    library_folders = read_library_folders(libraries_root, project_root)
+
+    vcpkg_list = list(read_vcpkg_list(libraries_root, project_root))
 
     if vcpkg_list:
         vcpkg_root = Path("vcpkg")
@@ -70,7 +101,7 @@ def main(args):
 
             subprocess.call([vcpkg_root / get_bootstrap_vcpkg()])
 
-        if args.platform == "native":
+        if platform == "native":
             if py_util.is_windows():
                 vcpkg_triplet = ":x64-windows"
             else:
@@ -83,15 +114,12 @@ def main(args):
             if py_util.is_windows():
                 subprocess.call([vcpkg, "install", "boost-build:x86-windows"])
         
-        for vcpgk_file in vcpkg_list:
-            with open (vcpgk_file, "r") as fileHandler:
-                for line in fileHandler.read().split('\n'):
-                    if line != "":
-                        subprocess.call([vcpkg, "install", line + vcpkg_triplet])
+        for vcpgk_library in vcpkg_list:
+            subprocess.call([vcpkg, "install", vcpgk_library + vcpkg_triplet])
 
-    cmake_args = ["-DLIBRARY_FOLDER=" + str(libraries_root)]
+    cmake_args = ["-DLIBRARY_FOLDER=" + str(libraries_root), "-DCMAKE_INSTALL_PREFIX=" + str(working_dir)]
 
-    if args.platform == "native":
+    if platform == "native":
         subprocess.call(["cmake", str(project_root)] + (cmake_args))
     else:
         emscripten_args = ["-DNODE_JS=" + os.path.abspath(setup_emscripten.get_node_js())]
@@ -101,10 +129,19 @@ def main(args):
         else:
             subprocess.call([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten"] + cmake_args + emscripten_args)
 
+    subprocess.call(["cmake", "--build", ".", "--config", "Release"])
+    subprocess.call(["ctest", "-VV", "-C", "Release"])
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--platform", choices=["native", "emscripten"], default="native", help='The platform')
     parser.add_argument('project_root', type=str, help='The source root directory')
 
-    main(parser.parse_args())
+    script_location = Path(os.path.abspath(__file__))
+    libraries_root = (script_location / ".." / ".." / "..").resolve()
+
+    working_dir = Path(os.getcwd())
+
+    args = parser.parse_args()
+    configure_project(args.project_root, libraries_root, working_dir, args.platform)
