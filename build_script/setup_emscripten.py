@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 import py_util
-import subprocess
 
 def get_emsdk():
     if py_util.is_windows():
@@ -25,18 +24,18 @@ def setup():
 
     cwd = os.getcwd()
 
-    subprocess.call(["git", "clone", "https://github.com/emscripten-core/emsdk.git"])
+    py_util.run_command(["git", "clone", "https://github.com/emscripten-core/emsdk.git"])
 
     os.chdir("emsdk")
 
     emsdk_version = "1.39.18"
 
-    subprocess.call([get_emsdk(), "install", emsdk_version])
-    subprocess.call([get_emsdk(), "activate", emsdk_version])
+    py_util.run_command([get_emsdk(), "install", emsdk_version])
+    py_util.run_command([get_emsdk(), "activate", emsdk_version])
 
     emsdk_version = "mingw-7.1.0-64bit"
 
-    subprocess.call([get_emsdk(), "install", emsdk_version])
-    subprocess.call([get_emsdk(), "activate", emsdk_version])
+    py_util.run_command([get_emsdk(), "install", emsdk_version])
+    py_util.run_command([get_emsdk(), "activate", emsdk_version])
 
     os.chdir(cwd)
