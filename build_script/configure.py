@@ -165,6 +165,8 @@ class cmake_generator:
 
 
 if __name__ == '__main__':
+    print("Configuring project")
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--platform", choices=["native", "emscripten"], default="native", help='The platform')
