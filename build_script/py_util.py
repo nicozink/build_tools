@@ -41,7 +41,9 @@ def run_command(args, verbose = True):
 
                 if not verbose:
                     print(*args)
-                    print(*output)
+
+                    for line in output:
+                        print(line)
 
                 raise Exception("Failed to run the command: {}".format(retcode))
             
