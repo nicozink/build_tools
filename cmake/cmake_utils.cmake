@@ -1,9 +1,5 @@
 set(BUILD_TOOLS_PROJECT_FOLDER ${CMAKE_CURRENT_LIST_DIR}/../../)
 
-if (EXISTS ${CMAKE_BINARY_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake)
-	set(CMAKE_TOOLCHAIN_FILE ${CMAKE_BINARY_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake)
-endif()
-
 if (VCPKG_TARGET_TRIPLET MATCHES "wasm32-emscripten")
 	set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE ${CMAKE_BINARY_DIR}/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake)
 endif()

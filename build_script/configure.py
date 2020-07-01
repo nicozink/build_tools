@@ -61,6 +61,7 @@ class cmake_generator:
     def __init__(self, github_token, verbose):
         self.working_dir = Path(os.getcwd())
         self.github_token = github_token
+        self.vcpkg_root = self.working_dir / "vcpkg"
         self.verbose = verbose
 
     def configure(self, project_root, libraries_root, platform):
@@ -104,22 +105,21 @@ class cmake_generator:
 
         if vcpkg_list:
             print("Configuring vcpkg")
-                
-            vcpkg_root = Path("vcpkg")
-            vcpkg = vcpkg_root / get_vcpkg()
+            
+            vcpkg = self.vcpkg_root / get_vcpkg()
 
             if not vcpkg.is_file():
                 print("Clone vcpkg")
 
-                self.run_command(["git", "clone", "https://github.com/microsoft/vcpkg.git"])
+                self.run_command(["git", "clone", "https://github.com/microsoft/vcpkg.git", self.vcpkg_root])
 
                 cwd = os.getcwd()
-                os.chdir(vcpkg_root)
+                os.chdir(self.vcpkg_root)
                 self.run_command(["git", "checkout", "ee17a685087a6886e5681e355d36cd784f0dd2c8"])
                 os.chdir(cwd)
 
                 print("Bootstrap vcpkg")
-                self.run_command([vcpkg_root / get_bootstrap_vcpkg()])
+                self.run_command([self.vcpkg_root / get_bootstrap_vcpkg()])
 
             if platform == "native":
                 if py_util.is_windows():
@@ -140,7 +140,9 @@ class cmake_generator:
                 print("Install " + vcpgk_library + vcpkg_triplet)
                 self.run_command([vcpkg, "install", vcpgk_library + vcpkg_triplet])
 
-        cmake_args = ["-DLIBRARY_FOLDER=" + str(libraries_root), "-DCMAKE_INSTALL_PREFIX=" + str(working_dir)]
+        cmake_args = ["-DLIBRARY_FOLDER=" + str(libraries_root),
+            "-DCMAKE_INSTALL_PREFIX=" + str(working_dir),
+            "-DCMAKE_TOOLCHAIN_FILE=" + str(self.vcpkg_root / "scripts" / "buildsystems" / "vcpkg.cmake")]
 
         print("Running cmake")
 
