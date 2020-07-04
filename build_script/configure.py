@@ -52,25 +52,37 @@ def read_tools(libraries_root, project_root):
     for tool in read_list([project_root], "tools_list.txt"):
         yield project_root / "tools" / tool
 
-def read_vcpkg_list(libraries_root, project_root):
+def read_vcpkg_list(libraries_root, project_root, platform):
+    if platform == "native":
+        if py_util.is_windows():
+            vcpkg_triplet = ":x64-windows"
+        else:
+            vcpkg_triplet = ""
+    else:
+        vcpkg_triplet = ":wasm32-emscripten"
+
     library_folders = read_library_folders(libraries_root, project_root)
 
-    return read_list(list(library_folders) + [project_root], "vcpkg_list.txt")
+    for item in read_list(list(library_folders) + [project_root], "vcpkg_list.txt"):
+        yield item + vcpkg_triplet
 
 class cmake_generator:
-    def __init__(self, github_token, verbose):
-        self.working_dir = Path(os.getcwd())
+    def __init__(self, github_token, libraries_root, verbose):
         self.github_token = github_token
-        self.vcpkg_root = self.working_dir / "vcpkg"
+        self.libraries_root = libraries_root
         self.verbose = verbose
-
-    def configure(self, project_root, libraries_root, platform):
+        self.working_dir = Path(os.getcwd())
+        self.vcpkg_root = self.working_dir / "vcpkg"
+        
+    def configure(self, project_root, platform):
         project_root = Path(project_root).resolve()
+ 
+        self.setup_toolchain(platform)
 
-        tools_list = list(read_tools(libraries_root, project_root))
+        self.setup_libraries(project_root, self.libraries_root)
+        self.setup_vcpkg(project_root, self.libraries_root, platform)
 
-        if tools_list:
-            print("Setting up tools:")
+        tools_list = list(read_tools(self.libraries_root, project_root))
 
         for tool in tools_list:
             tool_root = Path("tools") / tool.name
@@ -80,68 +92,25 @@ class cmake_generator:
             os.chdir(tool_root)
             
             print("Configuring " + tool.name)
-            self.configure(tool, libraries_root, "native")
+            self.generate_cmake(tool, "native")
 
             os.chdir(cwd)
 
             print("Building " + tool.name)
+            self.run_command(["cmake", "--build", tool_root, "--config", "Release"])
             self.run_command(["cmake", "--install", tool_root])
         
-        if platform == "emscripten":
-            setup_emscripten.setup()
+        self.generate_cmake(project_root, platform)
+
+        print("Building")
+        self.run_command(["cmake", "--build", ".", "--config", "Release"])
         
-        for library in read_library_list(project_root):
-            if not (libraries_root / library).is_dir():
-                print("Cloning " + library)
+        print("Running tests")
+        py_util.run_command(["ctest", "-VV", "-C", "Release"], verbose = True)
 
-                if (self.github_token != ""):
-                    self.run_command(["git", "clone", "https://nicozink:" + self.github_token + "@github.com/nicozink/" + library + ".git", libraries_root / library])
-                else:
-                    self.run_command(["git", "clone", "https://github.com/nicozink/" + library + ".git", libraries_root / library])
-
-        library_folders = read_library_folders(libraries_root, project_root)
-
-        vcpkg_list = list(read_vcpkg_list(libraries_root, project_root))
-
-        if vcpkg_list:
-            print("Configuring vcpkg")
-            
-            vcpkg = self.vcpkg_root / get_vcpkg()
-
-            if not vcpkg.is_file():
-                print("Clone vcpkg")
-
-                self.run_command(["git", "clone", "https://github.com/microsoft/vcpkg.git", self.vcpkg_root])
-
-                cwd = os.getcwd()
-                os.chdir(self.vcpkg_root)
-                self.run_command(["git", "checkout", "ee17a685087a6886e5681e355d36cd784f0dd2c8"])
-                os.chdir(cwd)
-
-                print("Bootstrap vcpkg")
-                self.run_command([self.vcpkg_root / get_bootstrap_vcpkg()])
-
-            if platform == "native":
-                if py_util.is_windows():
-                    vcpkg_triplet = ":x64-windows"
-                else:
-                    vcpkg_triplet = ""
-            else:
-                os.environ["EMSDK"] = os.path.abspath("emsdk")
-
-                vcpkg_triplet = ":wasm32-emscripten"
-
-                if py_util.is_windows():
-                    print("Install boost-build:x86-windows")
-
-                    self.run_command([vcpkg, "install", "boost-build:x86-windows"])
-            
-            for vcpgk_library in vcpkg_list:
-                print("Install " + vcpgk_library + vcpkg_triplet)
-                self.run_command([vcpkg, "install", vcpgk_library + vcpkg_triplet])
-
-        cmake_args = ["-DLIBRARY_FOLDER=" + str(libraries_root),
-            "-DCMAKE_INSTALL_PREFIX=" + str(working_dir),
+    def generate_cmake(self, project_root, platform):
+        cmake_args = ["-DLIBRARY_FOLDER=" + str(self.libraries_root),
+            "-DCMAKE_INSTALL_PREFIX=" + str(self.working_dir),
             "-DCMAKE_TOOLCHAIN_FILE=" + str(self.vcpkg_root / "scripts" / "buildsystems" / "vcpkg.cmake")]
 
         print("Running cmake")
@@ -156,15 +125,64 @@ class cmake_generator:
             else:
                 self.run_commandl([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten"] + cmake_args + emscripten_args)
 
-        print("Building")
-        self.run_command(["cmake", "--build", ".", "--config", "Release"])
-        
-        print("Running tests")
-        py_util.run_command(["ctest", "-VV", "-C", "Release"], verbose = True)
-
     def run_command(self, command):
         py_util.run_command(command, verbose = self.verbose)
 
+    def setup_libraries(self, project_root, libraries_root):
+        project_root = Path(project_root).resolve()
+        
+        for library in read_library_list(project_root):
+            if not (libraries_root / library).is_dir():
+                print("Cloning " + library)
+
+                if (self.github_token != ""):
+                    self.run_command(["git", "clone", "https://nicozink:" + self.github_token + "@github.com/nicozink/" + library + ".git", libraries_root / library])
+                else:
+                    self.run_command(["git", "clone", "https://github.com/nicozink/" + library + ".git", libraries_root / library])
+
+    def setup_toolchain(self, platform):
+        if platform == "emscripten":
+            setup_emscripten.setup()
+
+    def setup_vcpkg(self, project_root, libraries_root, platform):
+        project_root = Path(project_root).resolve()
+        
+        vcpkg_list = list(read_vcpkg_list(libraries_root, project_root, platform))
+
+        tools_list = list(read_tools(libraries_root, project_root))
+        
+        for tool_root in tools_list:
+            vcpkg_list += list(read_vcpkg_list(libraries_root, tool_root, "native"))
+
+        if vcpkg_list:
+            vcpkg_list = list(set(vcpkg_list))
+            vcpkg_list.sort()
+
+            vcpkg = self.vcpkg_root / get_vcpkg()
+
+            if not vcpkg.is_file():
+                print("Install vcpkg")
+
+                self.run_command(["git", "clone", "https://github.com/microsoft/vcpkg.git", self.vcpkg_root])
+
+                cwd = os.getcwd()
+                os.chdir(self.vcpkg_root)
+                self.run_command(["git", "checkout", "ee17a685087a6886e5681e355d36cd784f0dd2c8"])
+                os.chdir(cwd)
+
+                self.run_command([self.vcpkg_root / get_bootstrap_vcpkg()])
+
+            if platform == "emscripten":
+                os.environ["EMSDK"] = os.path.abspath("emsdk")
+
+                if py_util.is_windows():
+                    print("Install boost-build:x86-windows")
+
+                    self.run_command([vcpkg, "install", "boost-build:x86-windows"])
+            
+            for vcpgk_library in vcpkg_list:
+                print("Install " + vcpgk_library)
+                self.run_command([vcpkg, "install", vcpgk_library])
 
 if __name__ == '__main__':
     print("Configuring project")
@@ -179,9 +197,19 @@ if __name__ == '__main__':
     script_location = Path(os.path.abspath(__file__))
     libraries_root = (script_location / ".." / ".." / "..").resolve()
 
-    working_dir = Path(os.getcwd())
-
     args = parser.parse_args()
 
-    generator = cmake_generator(args.github_token, args.verbose)
-    generator.configure(args.project_root, libraries_root, args.platform)
+    working_dir = Path(os.getcwd())
+    project_root = Path(args.project_root).resolve()
+
+    cwd = os.getcwd()
+    
+    if (working_dir == project_root):
+        working_dir = working_dir / "build"
+        Path.mkdir(working_dir, parents=True, exist_ok=True)
+        os.chdir(working_dir)
+
+    generator = cmake_generator(args.github_token, libraries_root, args.verbose)
+    generator.configure(project_root, args.platform)
+
+    os.chdir(cwd)
