@@ -102,7 +102,8 @@ class cmake_generator:
         
         self.generate_cmake(project_root, platform)
 
-        print("Building")
+        print("Building " + project_root.name)
+        self.run_command(["dotnet", "restore", self.working_dir / (project_root.name + ".sln")])
         self.run_command(["cmake", "--build", ".", "--config", "Release"])
         
         print("Running tests")
