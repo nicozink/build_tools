@@ -193,6 +193,7 @@ if __name__ == '__main__':
     parser.add_argument("--platform", choices=["native", "emscripten"], default="native", help='The platform')
     parser.add_argument("--github_token", default="", help='The github authentication token')
     parser.add_argument("--verbose", action='store_true', help='Enable verbost output')
+    parser.add_argument("--working_dir", default=".", help='The working directory')
     parser.add_argument('project_root', type=str, help='The source root directory')
 
     script_location = Path(os.path.abspath(__file__))
@@ -200,16 +201,17 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    working_dir = Path(os.getcwd())
+    working_dir = Path(args.working_dir).resolve()
     project_root = Path(args.project_root).resolve()
 
     cwd = os.getcwd()
     
     if (working_dir == project_root):
         working_dir = working_dir / "build"
-        Path.mkdir(working_dir, parents=True, exist_ok=True)
-        os.chdir(working_dir)
 
+    Path.mkdir(working_dir, parents=True, exist_ok=True)
+    os.chdir(working_dir)
+    
     generator = cmake_generator(args.github_token, libraries_root, args.verbose)
     generator.configure(project_root, args.platform)
 
