@@ -103,7 +103,11 @@ class cmake_generator:
         self.generate_cmake(project_root, platform)
 
         print("Building " + project_root.name)
-        self.run_command(["dotnet", "restore", self.working_dir / (project_root.name + ".sln")])
+        
+        solution_file = self.working_dir / (project_root.name + ".sln")
+        if solution_file.is_file():
+            self.run_command(["dotnet", "restore", solution_file])
+        
         self.run_command(["cmake", "--build", ".", "--config", "Release"])
         
         print("Running tests")
@@ -111,9 +115,11 @@ class cmake_generator:
 
     def generate_cmake(self, project_root, platform):
         cmake_args = ["-DLIBRARY_FOLDER=" + str(self.libraries_root),
-            "-DCMAKE_INSTALL_PREFIX=" + str(self.working_dir),
-            "-DCMAKE_TOOLCHAIN_FILE=" + str(self.vcpkg_root / "scripts" / "buildsystems" / "vcpkg.cmake")]
+            "-DCMAKE_INSTALL_PREFIX=" + str(self.working_dir)]
 
+        if self.uses_vcpkg:
+            cmake_args += ["-DCMAKE_TOOLCHAIN_FILE=" + str(self.vcpkg_root / "scripts" / "buildsystems" / "vcpkg.cmake")]
+        
         print("Running cmake")
 
         if platform == "native":
@@ -156,6 +162,8 @@ class cmake_generator:
             vcpkg_list += list(read_vcpkg_list(libraries_root, tool_root, "native"))
 
         if vcpkg_list:
+            self.uses_vcpkg = True
+
             vcpkg_list = list(set(vcpkg_list))
             vcpkg_list.sort()
 
@@ -184,6 +192,8 @@ class cmake_generator:
             for vcpgk_library in vcpkg_list:
                 print("Install " + vcpgk_library)
                 self.run_command([vcpkg, "install", vcpgk_library])
+        else:
+            self.uses_vcpkg = False
 
 if __name__ == '__main__':
     print("Configuring project")
