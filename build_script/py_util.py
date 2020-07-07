@@ -1,6 +1,9 @@
 import platform
 import subprocess
 
+def get_system_name():
+	return platform.system().lower()
+
 def is_darwin():
     if platform.system() == "Darwin":
         return True

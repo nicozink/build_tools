@@ -72,7 +72,8 @@ class cmake_generator:
         self.libraries_root = libraries_root
         self.verbose = verbose
         self.working_dir = Path(os.getcwd())
-        self.vcpkg_root = self.working_dir / "vcpkg"
+        self.toolchain_root = self.libraries_root / "toolchain" / py_util.get_system_name()
+        self.vcpkg_root = self.toolchain_root / "vcpkg"
         
     def configure(self, project_root, platform):
         project_root = Path(project_root).resolve()
