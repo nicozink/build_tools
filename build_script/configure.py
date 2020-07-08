@@ -3,10 +3,10 @@ import os
 from pathlib import Path
 import platform
 import py_util
-import setup_emscripten
+import emscripten
 
-def get_emcmake():
-    root_path = Path("emsdk") / "upstream" / "emscripten"
+def get_emcmake(toolchain_root):
+    root_path = toolchain_root / "emsdk" / "upstream" / "emscripten"
 
     if py_util.is_windows():
         return root_path / "emcmake.bat"
@@ -116,7 +116,8 @@ class cmake_generator:
 
     def generate_cmake(self, project_root, platform):
         cmake_args = ["-DLIBRARY_FOLDER=" + str(self.libraries_root),
-            "-DCMAKE_INSTALL_PREFIX=" + str(self.working_dir)]
+            "-DCMAKE_INSTALL_PREFIX=" + str(self.working_dir),
+            "-DCMAKE_TOOLCHAIN_FOLDER=" + str(self.toolchain_root)]
 
         if self.uses_vcpkg:
             cmake_args += ["-DCMAKE_TOOLCHAIN_FILE=" + str(self.vcpkg_root / "scripts" / "buildsystems" / "vcpkg.cmake")]
@@ -126,12 +127,12 @@ class cmake_generator:
         if platform == "native":
             self.run_command(["cmake", str(project_root)] + (cmake_args))
         else:
-            emscripten_args = ["-DNODE_JS=" + os.path.abspath(setup_emscripten.get_node_js())]
+            emscripten_args = ["-DNODE_JS=" + os.path.abspath(self.emscripten.get_node_js())]
 
             if py_util.is_windows():
-                self.run_command([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten", "-G", "MinGW Makefiles", "-DCMAKE_MAKE_PROGRAM=" + str(setup_emscripten.get_mingw_root() / "mingw32-make.exe")] + cmake_args + emscripten_args)
+                self.run_command([get_emcmake(self.toolchain_root), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten", "-G", "MinGW Makefiles", "-DCMAKE_MAKE_PROGRAM=" + str(self.emscripten.get_mingw_root() / "mingw32-make.exe")] + cmake_args + emscripten_args)
             else:
-                self.run_commandl([get_emcmake(), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten"] + cmake_args + emscripten_args)
+                self.run_commandl([get_emcmake(self.toolchain_root), "cmake", project_root, "-DVCPKG_TARGET_TRIPLET=wasm32-emscripten"] + cmake_args + emscripten_args)
 
     def run_command(self, command):
         py_util.run_command(command, verbose = self.verbose)
@@ -150,7 +151,7 @@ class cmake_generator:
 
     def setup_toolchain(self, platform):
         if platform == "emscripten":
-            setup_emscripten.setup()
+            self.emscripten = emscripten.emscripten_toolchain(self.toolchain_root)
 
     def setup_vcpkg(self, project_root, libraries_root, platform):
         project_root = Path(project_root).resolve()
@@ -183,7 +184,7 @@ class cmake_generator:
                 self.run_command([self.vcpkg_root / get_bootstrap_vcpkg()])
 
             if platform == "emscripten":
-                os.environ["EMSDK"] = os.path.abspath("emsdk")
+                os.environ["EMSDK"] = str(self.toolchain_root / "emsdk")
 
                 if py_util.is_windows():
                     print("Install boost-build:x86-windows")

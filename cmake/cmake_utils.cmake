@@ -1,7 +1,7 @@
 set(BUILD_TOOLS_PROJECT_FOLDER ${CMAKE_CURRENT_LIST_DIR}/../../)
 
 if (VCPKG_TARGET_TRIPLET MATCHES "wasm32-emscripten")
-	set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE ${CMAKE_BINARY_DIR}/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake)
+	set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FOLDER}/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake)
 endif()
 
 PROJECT(build_tools VERSION 1.0.0)
