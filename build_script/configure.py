@@ -99,7 +99,7 @@ class cmake_generator:
 
             print("Building " + tool.name)
             self.run_command(["cmake", "--build", tool_root, "--config", "Release"])
-            self.run_command(["cmake", "--install", tool_root])
+            self.run_command(["cmake", "--install", tool_root, "--config", "Release"])
         
         self.generate_cmake(project_root, platform)
 
@@ -117,7 +117,8 @@ class cmake_generator:
     def generate_cmake(self, project_root, platform):
         cmake_args = ["-DLIBRARY_FOLDER=" + str(self.libraries_root),
             "-DCMAKE_INSTALL_PREFIX=" + str(self.working_dir),
-            "-DCMAKE_TOOLCHAIN_FOLDER=" + str(self.toolchain_root)]
+            "-DCMAKE_TOOLCHAIN_FOLDER=" + str(self.toolchain_root),
+            "-DCMAKE_BUILD_TYPE=Release"]
 
         if self.uses_vcpkg:
             cmake_args += ["-DCMAKE_TOOLCHAIN_FILE=" + str(self.vcpkg_root / "scripts" / "buildsystems" / "vcpkg.cmake")]
