@@ -67,7 +67,8 @@ def read_vcpkg_list(libraries_root, project_root, platform):
         yield item + vcpkg_triplet
 
 class cmake_generator:
-    def __init__(self, github_token, libraries_root, verbose):
+    def __init__(self, config, github_token, libraries_root, verbose):
+        self.config = config
         self.github_token = github_token
         self.libraries_root = libraries_root
         self.verbose = verbose
@@ -98,8 +99,8 @@ class cmake_generator:
             os.chdir(cwd)
 
             print("Building " + tool.name)
-            self.run_command(["cmake", "--build", tool_root, "--config", "Release"])
-            self.run_command(["cmake", "--install", tool_root, "--config", "Release"])
+            self.run_command(["cmake", "--build", tool_root, "--config", self.config])
+            self.run_command(["cmake", "--install", tool_root, "--config", self.config])
         
         self.generate_cmake(project_root, platform)
 
@@ -109,16 +110,16 @@ class cmake_generator:
         if solution_file.is_file():
             self.run_command(["dotnet", "restore", solution_file])
         
-        self.run_command(["cmake", "--build", ".", "--config", "Release"])
+        self.run_command(["cmake", "--build", ".", "--config", self.config])
         
         print("Running tests")
-        py_util.run_command(["ctest", "-VV", "-C", "Release"], verbose = True)
+        py_util.run_command(["ctest", "-VV", "-C", self.config], verbose = True)
 
     def generate_cmake(self, project_root, platform):
         cmake_args = ["-DLIBRARY_FOLDER=" + str(self.libraries_root),
             "-DCMAKE_INSTALL_PREFIX=" + str(self.working_dir),
             "-DCMAKE_TOOLCHAIN_FOLDER=" + str(self.toolchain_root),
-            "-DCMAKE_BUILD_TYPE=Release"]
+            "-DCMAKE_BUILD_TYPE=" + self.config]
 
         if self.uses_vcpkg:
             cmake_args += ["-DCMAKE_TOOLCHAIN_FILE=" + str(self.vcpkg_root / "scripts" / "buildsystems" / "vcpkg.cmake")]
@@ -203,6 +204,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("--config", choices=["Debug", "Release"], default="Release", help='The config')
     parser.add_argument("--platform", choices=["native", "emscripten"], default="native", help='The platform')
     parser.add_argument("--github_token", default="", help='The github authentication token')
     parser.add_argument("--verbose", action='store_true', help='Enable verbost output')
@@ -225,7 +227,7 @@ if __name__ == '__main__':
     Path.mkdir(working_dir, parents=True, exist_ok=True)
     os.chdir(working_dir)
     
-    generator = cmake_generator(args.github_token, libraries_root, args.verbose)
+    generator = cmake_generator(args.config, args.github_token, libraries_root, args.verbose)
     generator.configure(project_root, args.platform)
 
     os.chdir(cwd)
