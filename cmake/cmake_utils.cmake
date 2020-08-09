@@ -71,6 +71,9 @@ function(create_executable executable_name folder_name _source_files)
 		string(REPLACE "/" "\\" _group_path "${_source_path_rel}")
 		source_group("${_group_path}" FILES "${_source}")
 	endforeach()
+
+	set_target_properties(${executable_name} PROPERTIES "REFLECTION_FOLDER" ${CMAKE_CURRENT_SOURCE_DIR})
+	set_target_properties(${executable_name} PROPERTIES "REFLECTION_SOURCES" "${_source_files}")
 endfunction(create_executable)
 
 function(create_dll library_name folder_name _source_files)
@@ -87,6 +90,9 @@ function(create_dll library_name folder_name _source_files)
 		string(REPLACE "/" "\\" _group_path "${_source_path_rel}")
 		source_group("${_group_path}" FILES "${_source}")
 	endforeach()
+
+	set_target_properties(${library_name} PROPERTIES "REFLECTION_FOLDER" ${CMAKE_CURRENT_SOURCE_DIR})
+	set_target_properties(${library_name} PROPERTIES "REFLECTION_SOURCES" "${_source_files}")
 endfunction(create_dll)
 
 function(create_library library_name folder_name _source_files)
@@ -105,6 +111,9 @@ function(create_library library_name folder_name _source_files)
 		string(REPLACE "/" "\\" _group_path "${_source_path_rel}")
 		source_group("${_group_path}" FILES "${_source}")
 	endforeach()
+
+	set_target_properties(${library_name} PROPERTIES "REFLECTION_FOLDER" ${CMAKE_CURRENT_SOURCE_DIR})
+	set_target_properties(${library_name} PROPERTIES "REFLECTION_SOURCES" "${_source_files}")
 endfunction(create_library)
 
 function(create_interface library_name folder_name _source_files)
