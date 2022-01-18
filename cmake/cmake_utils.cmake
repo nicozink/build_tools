@@ -1,4 +1,9 @@
 set(BUILD_TOOLS_PROJECT_FOLDER ${CMAKE_CURRENT_LIST_DIR}/../../)
+set(LIBRARY_FOLDER ${CMAKE_CURRENT_LIST_DIR}/../../)
+
+if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+	initialise_vcpkg()
+endif()
 
 if (VCPKG_TARGET_TRIPLET MATCHES "wasm32-emscripten")
 	set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FOLDER}/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake)
@@ -138,6 +143,10 @@ endfunction(create_interface)
 
 function(import_library library_name)
 	if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+		if (NOT EXISTS ${LIBRARY_FOLDER}/${library_name})
+			execute_process(COMMAND git clone https://github.com/nicozink/${library_name}.git ${LIBRARY_FOLDER}/${library_name})
+		endif()
+
 		add_subdirectory(${LIBRARY_FOLDER}/${library_name} ${library_name})
 	endif()
 endfunction(import_library)
