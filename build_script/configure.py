@@ -13,59 +13,6 @@ def get_emcmake(toolchain_root):
     else:
         return Path(".") / root_path / "emcmake"
 
-def get_vcpkg():
-    if py_util.is_windows():
-        return "vcpkg.exe"
-    else:
-        return "vcpkg"
-
-def get_bootstrap_vcpkg():
-    if py_util.is_windows():
-        return "bootstrap-vcpkg.bat"
-    else:
-        return "bootstrap-vcpkg.sh"
-
-def read_list(folders_list, file_name):
-    read_list = []
-
-    for folder in folders_list:
-        if (folder / file_name).is_file():
-            with open (folder / file_name, "r") as fileHandler:
-                for line in fileHandler.read().split('\n'):
-                    if line != "":
-                        yield line
-
-def read_library_list(project_root):
-    return read_list([project_root], "libraries_list.txt")
-
-def read_library_folders(libraries_root, project_root):
-    for folder in read_library_list(project_root):
-        yield libraries_root / folder
-
-def read_tools(libraries_root, project_root):
-    library_folders = read_library_folders(libraries_root, project_root)
-
-    for library_folder in library_folders:
-        for tool in read_list([library_folder], "tools_list.txt"):
-            yield library_folder / "tools" / tool
-
-    for tool in read_list([project_root], "tools_list.txt"):
-        yield project_root / "tools" / tool
-
-def read_vcpkg_list(libraries_root, project_root, platform):
-    if platform == "native":
-        if py_util.is_windows():
-            vcpkg_triplet = ":x64-windows"
-        else:
-            vcpkg_triplet = ""
-    else:
-        vcpkg_triplet = ":wasm32-emscripten"
-
-    library_folders = read_library_folders(libraries_root, project_root)
-
-    for item in read_list(list(library_folders) + [project_root], "vcpkg_list.txt"):
-        yield item + vcpkg_triplet
-
 class cmake_generator:
     def __init__(self, config, github_token, libraries_root, verbose):
         self.config = config
@@ -81,27 +28,6 @@ class cmake_generator:
  
         self.setup_toolchain(platform)
 
-        self.setup_libraries(project_root, self.libraries_root)
-        self.setup_vcpkg(project_root, self.libraries_root, platform)
-
-        tools_list = list(read_tools(self.libraries_root, project_root))
-
-        for tool in tools_list:
-            tool_root = Path("tools") / tool.name
-            Path.mkdir(tool_root, parents=True, exist_ok=True)
-
-            cwd = os.getcwd()
-            os.chdir(tool_root)
-            
-            print("Configuring " + tool.name)
-            self.generate_cmake(tool, "native")
-
-            os.chdir(cwd)
-
-            print("Building " + tool.name)
-            self.run_command(["cmake", "--build", tool_root, "--config", self.config])
-            self.run_command(["cmake", "--install", tool_root, "--config", self.config])
-        
         self.generate_cmake(project_root, platform)
 
         print("Building " + project_root.name)
@@ -120,9 +46,6 @@ class cmake_generator:
             "-DCMAKE_INSTALL_PREFIX=" + str(self.working_dir),
             "-DCMAKE_TOOLCHAIN_FOLDER=" + str(self.toolchain_root),
             "-DCMAKE_BUILD_TYPE=" + self.config]
-
-        if self.uses_vcpkg:
-            cmake_args += ["-DCMAKE_TOOLCHAIN_FILE=" + str(self.vcpkg_root / "scripts" / "buildsystems" / "vcpkg.cmake")]
         
         print("Running cmake")
 
@@ -139,65 +62,12 @@ class cmake_generator:
     def run_command(self, command):
         py_util.run_command(command, verbose = self.verbose)
 
-    def setup_libraries(self, project_root, libraries_root):
-        project_root = Path(project_root).resolve()
-        
-        for library in read_library_list(project_root):
-            if not (libraries_root / library).is_dir():
-                print("Cloning " + library)
-
-                if (self.github_token != ""):
-                    self.run_command(["git", "clone", "https://nicozink:" + self.github_token + "@github.com/nicozink/" + library + ".git", libraries_root / library])
-                else:
-                    self.run_command(["git", "clone", "https://github.com/nicozink/" + library + ".git", libraries_root / library])
-
     def setup_toolchain(self, platform):
         if platform == "emscripten":
             self.emscripten = emscripten.emscripten_toolchain(self.toolchain_root)
 
     def setup_vcpkg(self, project_root, libraries_root, platform):
         project_root = Path(project_root).resolve()
-        
-        vcpkg_list = list(read_vcpkg_list(libraries_root, project_root, platform))
-
-        tools_list = list(read_tools(libraries_root, project_root))
-        
-        for tool_root in tools_list:
-            vcpkg_list += list(read_vcpkg_list(libraries_root, tool_root, "native"))
-
-        if vcpkg_list:
-            self.uses_vcpkg = True
-
-            vcpkg_list = list(set(vcpkg_list))
-            vcpkg_list.sort()
-
-            vcpkg = self.vcpkg_root / get_vcpkg()
-
-            if not vcpkg.is_file():
-                print("Install vcpkg")
-
-                self.run_command(["git", "clone", "https://github.com/microsoft/vcpkg.git", self.vcpkg_root])
-
-                cwd = os.getcwd()
-                os.chdir(self.vcpkg_root)
-                self.run_command(["git", "checkout", "ee17a685087a6886e5681e355d36cd784f0dd2c8"])
-                os.chdir(cwd)
-
-                self.run_command([self.vcpkg_root / get_bootstrap_vcpkg()])
-
-            if platform == "emscripten":
-                os.environ["EMSDK"] = str(self.toolchain_root / "emsdk")
-
-                if py_util.is_windows():
-                    print("Install boost-build:x86-windows")
-
-                    self.run_command([vcpkg, "install", "boost-build:x86-windows"])
-            
-            for vcpgk_library in vcpkg_list:
-                print("Install " + vcpgk_library)
-                self.run_command([vcpkg, "install", vcpgk_library])
-        else:
-            self.uses_vcpkg = False
 
 if __name__ == '__main__':
     print("Configuring project")
@@ -217,7 +87,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     working_dir = Path(args.working_dir).resolve()
-    project_root = Path(args.project_root).resolve()
+    project_root = (libraries_root / Path(args.project_root)).resolve()
 
     cwd = os.getcwd()
     
